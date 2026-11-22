@@ -44,6 +44,7 @@ const nav = [
   { name: "Home", href: "#home" },
   { name: "Our Story", href: "#story" },
   { name: "The Collection", href: "#collection" },
+  { name: "Menu", href: "/menu" },
   { name: "Experience", href: "#experience" },
 ];
 

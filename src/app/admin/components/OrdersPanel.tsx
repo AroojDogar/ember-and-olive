@@ -69,15 +69,13 @@ function formatDate(value: string) {
   });
 }
 
-export default function OrdersPanel({
-  password,
-}: {
-  password: string;
-}) {
-  const [orders, setOrders] = useState<
-    CustomerOrder[]
-  >([]);
+// ========================================
+// EMBER & OLIVE — ORDERS MANAGEMENT
+// Uses authenticated admin session
+// ========================================
 
+export default function OrdersPanel() {
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -89,31 +87,21 @@ export default function OrdersPanel({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  // FETCH ORDERS
+  // ======================================
+  // 1. LOAD ORDERS USING LOGIN SESSION
+  // ======================================
+
   async function loadOrders() {
     setError("");
     setMessage("");
-
-    if (!password.trim()) {
-      setError(
-        "Enter your admin password in the Add Dish section first."
-      );
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "/api/admin/orders",
-        {
-          method: "GET",
-          headers: {
-            "x-admin-password": password,
-          },
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/admin/orders", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
@@ -140,16 +128,14 @@ export default function OrdersPanel({
     }
   }
 
-  // UPDATE ORDER STATUS
+  // ======================================
+  // 2. UPDATE ORDER STATUS
+  // ======================================
+
   async function changeStatus(
     order: CustomerOrder,
     status: OrderStatus
   ) {
-    if (!password.trim()) {
-      setError("Admin password is required.");
-      return;
-    }
-
     if (status === "cancelled") {
       const confirmed = window.confirm(
         `Cancel order #${order.id}?`
@@ -163,27 +149,23 @@ export default function OrdersPanel({
     setUpdatingId(order.id);
 
     try {
-      const response = await fetch(
-        "/api/admin/orders",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-password": password,
-          },
-          body: JSON.stringify({
-            id: order.id,
-            status,
-          }),
-        }
-      );
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: order.id,
+          status,
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.message ||
-            "Unable to update order status."
+          data.message || "Unable to update order status."
         );
       }
 
@@ -209,6 +191,10 @@ export default function OrdersPanel({
     }
   }
 
+  // ======================================
+  // 3. FILTER ORDERS
+  // ======================================
+
   const filteredOrders =
     filter === "all"
       ? orders
@@ -233,6 +219,7 @@ export default function OrdersPanel({
 
   return (
     <section className="mt-14 border border-[#CBAA78]/30 bg-[#17231B] p-6 text-[#F2ECE0] md:p-9">
+
       {/* SECTION HEADER */}
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5 border-b border-[#CBAA78]/25 pb-7">
         <div>
@@ -248,9 +235,9 @@ export default function OrdersPanel({
           </h2>
 
           <p className="mt-4 max-w-xl text-sm leading-7 text-[#AAB2A3]">
-            Review incoming reservations of
-            dishes, manage preparation and
-            track each order through completion.
+            Review incoming customer orders,
+            manage preparation and track each
+            order through completion.
           </p>
         </div>
 
@@ -268,7 +255,7 @@ export default function OrdersPanel({
         </button>
       </div>
 
-      {/* MESSAGES */}
+      {/* ERROR MESSAGE */}
       {error && (
         <div
           role="alert"
@@ -278,6 +265,7 @@ export default function OrdersPanel({
         </div>
       )}
 
+      {/* SUCCESS MESSAGE */}
       {message && (
         <div
           role="status"
@@ -287,7 +275,7 @@ export default function OrdersPanel({
         </div>
       )}
 
-      {/* LOADED SUMMARY */}
+      {/* DASHBOARD STATISTICS */}
       {loaded && (
         <>
           <div className="mb-8 grid gap-4 sm:grid-cols-4">
@@ -361,21 +349,21 @@ export default function OrdersPanel({
           </p>
 
           <p className="mt-4 text-sm leading-7 text-[#AAB2A3]">
-            Enter your admin password above,
+            Sign in to your Admin Dashboard,
             then select Load Orders to view
             customer purchases.
           </p>
         </div>
       )}
 
-      {/* LOADING */}
+      {/* LOADING STATE */}
       {loading && !loaded && (
         <p className="py-16 text-center text-sm text-[#AAB2A3]">
           Fetching orders from NeonDB...
         </p>
       )}
 
-      {/* EMPTY */}
+      {/* NO ORDERS */}
       {loaded && filteredOrders.length === 0 && (
         <div className="border border-dashed border-[#CBAA78]/25 px-6 py-16 text-center">
           <p className="font-serif text-3xl italic text-[#D7B780]">
@@ -389,7 +377,7 @@ export default function OrdersPanel({
         </div>
       )}
 
-      {/* ORDER CARDS */}
+      {/* CUSTOMER ORDER CARDS */}
       {loaded && filteredOrders.length > 0 && (
         <div className="grid items-start gap-5 xl:grid-cols-2">
           {filteredOrders.map((order) => {
@@ -490,6 +478,7 @@ export default function OrdersPanel({
                     ))}
                   </div>
 
+                  {/* SPECIAL INSTRUCTIONS */}
                   {order.notes && (
                     <div className="mt-6 border-l-2 border-[#D7B780]/50 pl-4">
                       <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-[#CBAA78]">
@@ -514,7 +503,7 @@ export default function OrdersPanel({
                   </span>
                 </div>
 
-                {/* MANAGEMENT BUTTONS */}
+                {/* STATUS BUTTONS */}
                 <div className="mt-6 flex flex-wrap gap-3">
                   {next && (
                     <button
@@ -563,6 +552,7 @@ export default function OrdersPanel({
         </div>
       )}
 
+      {/* FOOTER */}
       <p className="mt-8 text-center text-[10px] uppercase tracking-[0.16em] text-[#829080]">
         EMBER & OLIVE / SECURE ORDER OPERATIONS
       </p>

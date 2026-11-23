@@ -631,6 +631,21 @@ export default function Home() {
           <span>DESIGNED TO BE REMEMBERED</span>
         </div>
       </footer>
+
+{/* ADMIN ACCESS — HOMEPAGE FOOTER */}
+<div className="border-t border-[#CBAA78]/20 bg-[#0D1510] px-6 py-6 text-center">
+  <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-[#899586]">
+    EMBER & OLIVE · MANAGEMENT ACCESS
+  </p>
+
+  <a
+    href="/admin/login"
+    className="inline-flex items-center justify-center border border-[#CBAA78]/40 px-6 py-3 text-[11px] uppercase tracking-[0.2em] text-[#CBAA78] transition duration-300 hover:border-[#CBAA78] hover:bg-[#CBAA78] hover:text-[#101813]"
+  >
+    ADMIN LOGIN ↗
+  </a>
+</div>
+
     </main>
   );
 }

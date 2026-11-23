@@ -1,8 +1,8 @@
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { sql } from "@/lib/db";
-
+import { requireAdminSession } from "@/lib/admin-auth";
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
 
@@ -51,33 +51,16 @@ function isValidImage(
 }
 
 // UPLOAD PHOTO AND SAVE URL TO NEONDB
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // ADMIN LOGIN SESSION VERIFICATION
+  const authError = requireAdminSession(request);
+
+  if (authError) {
+    return authError;
+  }
+
   try {
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminPassword) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Admin password is not configured.",
-        },
-        { status: 503 }
-      );
-    }
-
-    if (
-      request.headers.get("x-admin-password") !==
-      adminPassword
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Incorrect admin password.",
-        },
-        { status: 401 }
-      );
-    }
-
+    // VERIFY BLOB STORAGE CONFIGURATION
     if (
       !process.env.BLOB_STORE_ID &&
       !process.env.BLOB_READ_WRITE_TOKEN
@@ -108,6 +91,7 @@ export async function POST(request: Request) {
     const rawId = formData.get("dishId");
     const file = formData.get("file");
 
+    // VALIDATE DISH ID
     if (
       typeof rawId !== "string" ||
       !/^[1-9]\d*$/.test(rawId)
@@ -133,6 +117,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // VALIDATE FILE
     if (!(file instanceof File)) {
       return NextResponse.json(
         {
@@ -168,6 +153,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // VERIFY IMAGE SIGNATURE
     const header = new Uint8Array(
       await file.slice(0, 12).arrayBuffer()
     );
@@ -200,7 +186,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // UPLOAD IMAGE TO BLOB
+    // UPLOAD IMAGE TO VERCEL BLOB
     const blob = await put(
       `menu/dish-${dishId}-${Date.now()}.${extension}`,
       file,

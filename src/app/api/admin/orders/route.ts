@@ -1,8 +1,13 @@
 
-import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import {
+  type NextRequest,
+  NextResponse,
+} from "next/server";
 
-// EMBER & OLIVE — ADMIN ORDER MANAGEMENT
+import { sql } from "@/lib/db";
+import { requireAdminSession } from "@/lib/admin-auth";
+
+// EMBER & OLIVE — PROTECTED ORDER MANAGEMENT
 
 const allowedTransitions: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
@@ -13,44 +18,16 @@ const allowedTransitions: Record<string, string[]> = {
   cancelled: [],
 };
 
-function authorizeAdmin(request: Request) {
-  const password = process.env.ADMIN_PASSWORD;
-
-  if (!password) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Admin password is not configured.",
-      },
-      { status: 503 }
-    );
-  }
-
-  const provided = request.headers.get(
-    "x-admin-password"
-  );
-
-  if (!provided || provided !== password) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Unauthorized. Check admin password.",
-      },
-      { status: 401 }
-    );
-  }
-
-  return null;
-}
-
 // ========================================
-// GET — FETCH CUSTOMER ORDERS
+// GET — FETCH ALL CUSTOMER ORDERS
 // ========================================
 
-export async function GET(request: Request) {
-  const authError = authorizeAdmin(request);
+export async function GET(request: NextRequest) {
+  const authError = requireAdminSession(request);
 
-  if (authError) return authError;
+  if (authError) {
+    return authError;
+  }
 
   try {
     const orders = await sql`
@@ -73,7 +50,7 @@ export async function GET(request: Request) {
                 'quantity', oi.quantity,
                 'unit_price', oi.unit_price::text,
                 'subtotal',
-                  (oi.quantity * oi.unit_price)::text
+                (oi.quantity * oi.unit_price)::text
               )
               ORDER BY oi.id
             )
@@ -116,10 +93,12 @@ export async function GET(request: Request) {
 // PATCH — UPDATE ORDER STATUS
 // ========================================
 
-export async function PATCH(request: Request) {
-  const authError = authorizeAdmin(request);
+export async function PATCH(request: NextRequest) {
+  const authError = requireAdminSession(request);
 
-  if (authError) return authError;
+  if (authError) {
+    return authError;
+  }
 
   try {
     let body: unknown;
@@ -185,7 +164,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // GET CURRENT STATUS
+    // CHECK CURRENT ORDER STATUS
     const existing = await sql`
       SELECT status
       FROM orders
@@ -221,7 +200,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // UPDATE WITH CONCURRENT CHANGE PROTECTION
+    // PREVENT CONFLICTING STATUS UPDATES
     const updated = await sql`
       UPDATE orders
       SET status = ${nextStatus}
@@ -239,7 +218,7 @@ export async function PATCH(request: Request) {
         {
           success: false,
           message:
-            "Order was changed by another request. Refresh and try again.",
+            "Order was updated elsewhere. Refresh and try again.",
         },
         { status: 409 }
       );

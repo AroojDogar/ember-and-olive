@@ -67,7 +67,6 @@ export default function AdminPage() {
   const [uploadingId, setUploadingId] =
     useState<string | null>(null);
 
-  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -129,26 +128,20 @@ export default function AdminPage() {
     setMessage("");
   }
 
-  // ADD DISH
+  // ADD DISH USING ADMIN SESSION
   async function addDish(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
     clearNotices();
-
-    if (!password.trim()) {
-      setError("Enter your admin password.");
-      return;
-    }
-
     setSaving(true);
 
     try {
       const response = await fetch("/api/menu", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
         },
         body: JSON.stringify(form),
       });
@@ -163,7 +156,6 @@ export default function AdminPage() {
 
       setForm({ ...emptyForm });
       await loadItems();
-
       setMessage("Dish added successfully.");
     } catch (err) {
       setError(
@@ -179,7 +171,6 @@ export default function AdminPage() {
   // OPEN EDIT FORM
   function openEdit(item: MenuItem) {
     clearNotices();
-
     setEditItem(item);
 
     setEditForm({
@@ -190,7 +181,7 @@ export default function AdminPage() {
     });
   }
 
-  // SAVE CHANGES
+  // UPDATE DISH USING ADMIN SESSION
   async function updateDish(
     event: FormEvent<HTMLFormElement>
   ) {
@@ -199,20 +190,14 @@ export default function AdminPage() {
     if (!editItem) return;
 
     clearNotices();
-
-    if (!password.trim()) {
-      setError("Enter your admin password.");
-      return;
-    }
-
     setUpdating(true);
 
     try {
       const response = await fetch("/api/menu", {
         method: "PATCH",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
         },
         body: JSON.stringify({
           id: editItem.id,
@@ -230,7 +215,6 @@ export default function AdminPage() {
 
       setEditItem(null);
       await loadItems();
-
       setMessage("Dish updated successfully.");
     } catch (err) {
       setError(
@@ -243,14 +227,9 @@ export default function AdminPage() {
     }
   }
 
-  // DELETE DISH
+  // DELETE DISH USING ADMIN SESSION
   async function deleteDish(item: MenuItem) {
     clearNotices();
-
-    if (!password.trim()) {
-      setError("Enter your admin password.");
-      return;
-    }
 
     const confirmed = window.confirm(
       `Permanently delete "${item.name}"?`
@@ -263,9 +242,9 @@ export default function AdminPage() {
     try {
       const response = await fetch("/api/menu", {
         method: "DELETE",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
         },
         body: JSON.stringify({
           id: item.id,
@@ -285,7 +264,6 @@ export default function AdminPage() {
       }
 
       await loadItems();
-
       setMessage("Dish deleted successfully.");
     } catch (err) {
       setError(
@@ -306,7 +284,6 @@ export default function AdminPage() {
     clearNotices();
 
     const file = event.target.files?.[0];
-
     event.target.value = "";
 
     if (!file) return;
@@ -349,7 +326,7 @@ export default function AdminPage() {
     reader.readAsDataURL(file);
   }
 
-  // UPLOAD PHOTO TO BLOB + SAVE IN NEONDB
+  // UPLOAD PHOTO USING ADMIN SESSION
   async function uploadPhoto(item: MenuItem) {
     clearNotices();
 
@@ -358,11 +335,6 @@ export default function AdminPage() {
       photoDraft.dishId !== String(item.id)
     ) {
       setError("Choose a photo first.");
-      return;
-    }
-
-    if (!password.trim()) {
-      setError("Enter your admin password.");
       return;
     }
 
@@ -376,9 +348,7 @@ export default function AdminPage() {
 
       const response = await fetch("/api/upload", {
         method: "POST",
-        headers: {
-          "x-admin-password": password,
-        },
+        credentials: "same-origin",
         body: uploadData,
       });
 
@@ -402,7 +372,6 @@ export default function AdminPage() {
       );
 
       setPhotoDraft(null);
-
       await loadItems();
 
       setMessage(
@@ -661,33 +630,6 @@ export default function AdminPage() {
                     })
                   }
                 />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="adminPassword"
-                  className={labelStyle}
-                >
-                  Admin Password
-                </label>
-
-                <input
-                  id="adminPassword"
-                  className={inputStyle}
-                  type="password"
-                  autoComplete="off"
-                  required
-                  placeholder="Enter admin password"
-                  value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
-                  }
-                />
-
-                <p className="mt-3 text-xs leading-6 text-[#899586]">
-                  Required for adding, editing,
-                  deleting and uploading dish photos.
-                </p>
               </div>
 
               <button
@@ -950,7 +892,7 @@ export default function AdminPage() {
           </section>
         </div>
 
-        <OrdersPanel password={password} />
+        <OrdersPanel />
 
         <p className="mt-14 text-center text-[10px] uppercase tracking-[0.2em] text-[#788578]">
           EMBER & OLIVE — ROYAL RESTAURANT MANAGEMENT SYSTEM
@@ -962,7 +904,6 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 px-4 py-8 backdrop-blur-md">
           <section
             role="dialog"
-
             aria-modal="true"
             aria-labelledby="editTitle"
             className="my-auto w-full max-w-xl border border-[#D7B780]/50 bg-[#17231B] p-6 md:p-10"
@@ -1108,27 +1049,6 @@ export default function AdminPage() {
                       ...editForm,
                       description: event.target.value,
                     })
-                  }
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="editPassword"
-                  className={labelStyle}
-                >
-                  Admin Password
-                </label>
-
-                <input
-                  id="editPassword"
-                  className={inputStyle}
-                  type="password"
-                  autoComplete="off"
-                  required
-                  value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
                   }
                 />
               </div>

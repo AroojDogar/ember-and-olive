@@ -1,6 +1,8 @@
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { requireAdminSession } from "@/lib/admin-auth";
+
 
 // =============================================
 // EMBER & OLIVE — RESTAURANT MENU API
@@ -20,34 +22,12 @@ type DishData = {
 // HELPER: ADMIN AUTHORIZATION
 // ---------------------------------------------
 
-function checkAdmin(request: Request): NextResponse | null {
-  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminPassword) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Admin configuration is missing.",
-      },
-      { status: 503 }
-    );
-  }
-
-  const providedPassword =
-    request.headers.get("x-admin-password");
-
-  if (!providedPassword || providedPassword !== adminPassword) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Incorrect admin password.",
-      },
-      { status: 401 }
-    );
-  }
-
-  return null;
+function checkAdmin(request: NextRequest): NextResponse | null {
+  return requireAdminSession(request);
 }
+
+
 
 // ---------------------------------------------
 // HELPER: READ REQUEST BODY
@@ -206,7 +186,8 @@ export async function GET() {
 // 2. POST — ADD NEW MENU ITEM
 // =============================================
 
-export async function POST(request: Request) {
+
+export async function POST(request: NextRequest) {
   try {
     const authError = checkAdmin(request);
 
@@ -289,7 +270,7 @@ export async function POST(request: Request) {
 // 3. PATCH — UPDATE EXISTING MENU ITEM
 // =============================================
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
     const authError = checkAdmin(request);
 
@@ -375,7 +356,7 @@ export async function PATCH(request: Request) {
 // 4. DELETE — REMOVE EXISTING MENU ITEM
 // =============================================
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
     const authError = checkAdmin(request);
 
